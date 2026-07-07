@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hermes-delegate-routing"
+version = "0.1.0"
+description = "Hermes Agent plugin: explicit per-task model/provider routing for delegate_task (fork-free)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "b3nw" }]
+keywords = ["hermes-agent", "plugin", "delegate", "subagent", "model-routing"]
+
+# NOTE: no runtime dependency on hermes-agent — it is the HOST that loads this
+# plugin, not a package dependency. The plugin imports host internals lazily.
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.entry-points."hermes_agent.plugins"]
+# The loader (hermes_cli/plugins.py:_scan_entry_points) imports this module and
+# calls its register(ctx). Value is the importable module that defines register().
+delegate_routing = "hermes_delegate_routing"
+
+[project.urls]
+Homepage = "https://github.com/b3nw/hermes-delegate-routing"
+
+[tool.setuptools]
+packages = ["hermes_delegate_routing"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

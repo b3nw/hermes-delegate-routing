@@ -1,0 +1,24 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      # Unit tests inject fake hermes_cli / tools.delegate_tool modules, so they
+      # run without a real hermes-agent install. The integration smoke test
+      # self-skips when no host is importable.
+      - name: Run tests
+        run: uv run --extra dev pytest -q

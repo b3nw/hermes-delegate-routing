@@ -1,0 +1,17 @@
+name: delegate_routing
+version: "0.1.0"
+description: >-
+  Explicit per-task model/provider routing for delegate_task. Lets a batch
+  delegation route each subagent to a different model/provider via
+  tasks[].model / tasks[].provider (top-level is not supported — the host drops
+  it). Fork-free reproduction of the rejected upstream PR #36790. Installs three
+  idempotent, signature-guarded monkeypatches on tools.delegate_tool
+  (schema/capture/apply) because delegate_task is special-cased to bypass the
+  tool registry, so register_tool(override=True) cannot intercept it. Needs no
+  allow_tool_override grant. Degrades to a no-op on an unsupported host.
+author: b3nw
+kind: standalone
+# This plugin registers no tools/hooks via ctx — it augments the built-in
+# delegate_task by monkeypatching host internals at load. See docs/PRD.md §6.4.
+provides_tools: []
+provides_hooks: []
