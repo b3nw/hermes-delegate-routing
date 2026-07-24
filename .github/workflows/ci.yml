@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    # Weekly host-drift canary (only runs the e2e job, and only if it is
+    # configured — see the `e2e` job below).
+    - cron: "0 6 * * 1"
 
 jobs:
   test:
@@ -18,7 +22,43 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       # Unit tests inject fake hermes_cli / tools.delegate_tool modules, so they
-      # run without a real hermes-agent install. The integration smoke test
-      # self-skips when no host is importable.
+      # run without a real hermes-agent install. The host-backed tests
+      # (integration smoke + e2e) self-skip when no host is importable.
       - name: Run tests
         run: uv run --extra dev pytest -q
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - name: Ruff
+        run: uv run --extra dev ruff check .
+      - name: Mypy
+        run: uv run --extra dev mypy
+
+  # Host-backed end-to-end gate (docs/CI_E2E_TESTING.md, Tier 1). Opt-in: set the
+  # repository variables HERMES_AGENT_REPO (e.g. "NousResearch/hermes-agent") and
+  # HERMES_AGENT_REF (a pinned SHA/tag, e.g. "v2026.7.20" for 0.19.0; use "main"
+  # on the schedule for a drift canary). Without them the job is skipped, so a
+  # fresh clone stays green.
+  e2e:
+    runs-on: ubuntu-latest
+    if: ${{ vars.HERMES_AGENT_REPO != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          # hermes-agent requires Python >=3.11,<3.14.
+          python-version: "3.13"
+      - name: Install host + plugin
+        run: |
+          uv venv
+          uv pip install "hermes-agent @ git+https://github.com/${{ vars.HERMES_AGENT_REPO }}@${{ vars.HERMES_AGENT_REF }}"
+          uv pip install -e ".[dev]"
+      - name: Integration smoke + Tier-1 e2e
+        run: uv run pytest tests/test_integration_smoke.py tests/test_e2e_routing.py -q

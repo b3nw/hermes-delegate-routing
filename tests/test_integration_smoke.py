@@ -58,7 +58,9 @@ def test_resolver_against_real_parse_model_flags():
         creds = resolve_model_provider_override(
             model_input="glm-5 --provider openrouter",
             provider_input=None,
-            parent_agent=SimpleNamespace(provider="anthropic", model="opus", base_url="", api_key=""),
+            parent_agent=SimpleNamespace(
+                provider="anthropic", model="opus", base_url="", api_key=""
+            ),
         )
     assert creds["model"] == "glm-5"
     assert creds["provider"] == "openrouter"

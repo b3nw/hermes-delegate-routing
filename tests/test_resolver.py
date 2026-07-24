@@ -100,9 +100,10 @@ def test_switch_model_failure_raises():
 def test_tolerates_parse_model_flags_arity_growth():
     """Regression: host parse_model_flags gained a 5th return value (is_session);
     the resolver must read only elements [0]/[1] and ignore the growing tail."""
-    with patch("hermes_cli.model_switch.parse_model_flags", return_value=("m", "", 0, 0, 0, "future")), patch(
-        "hermes_cli.model_switch.switch_model"
-    ) as mock_switch, patch(
+    with patch(
+        "hermes_cli.model_switch.parse_model_flags",
+        return_value=("m", "", 0, 0, 0, "future"),
+    ), patch("hermes_cli.model_switch.switch_model") as mock_switch, patch(
         "hermes_cli.runtime_provider.resolve_runtime_provider",
         return_value={"command": None, "args": []},
     ):

@@ -113,8 +113,6 @@ def test_routing_visible_during_call_and_reset_after():
 
 
 def test_fail_hard_returns_tool_error_and_skips_delegation():
-    orig_build, calls = _spy_build_child()
-    wrapped_build = make_build_child_wrapper(orig_build)
     called = {"host": False}
 
     def host(**kw):
@@ -143,9 +141,6 @@ def test_fallback_uses_batch_creds_and_still_delegates():
 
 
 def test_routing_reset_even_if_host_raises():
-    orig_build, _ = _spy_build_child()
-    wrapped_build = make_build_child_wrapper(orig_build)
-
     def host(**kw):
         raise RuntimeError("host blew up")
 
@@ -194,8 +189,6 @@ def test_delegate_task_wrapper_forwards_unknown_future_kwarg():
 
 
 def test_single_goal_no_tasks_is_passthrough():
-    orig_build, calls = _spy_build_child()
-    wrapped_build = make_build_child_wrapper(orig_build)
     seen = []
 
     def host(goal=None, context=None, tasks=None, **kw):

@@ -21,9 +21,8 @@ and rationale: [`docs/DESIGN.md`](docs/DESIGN.md).
 Install into the **same environment** as your hermes-agent, then enable it.
 
 ```bash
-# from a checkout (no PyPI release yet)
-pip install /path/to/hermes-delegate-routing
-# or, for development:
+pip install hermes-delegate-routing
+# or, for development from a checkout:
 pip install -e /path/to/hermes-delegate-routing
 ```
 
@@ -81,9 +80,12 @@ behavior is never left half-patched. See [`docs/DESIGN.md`](docs/DESIGN.md).
 
 ## Supported versions
 
+Verified against upstream [`NousResearch/hermes-agent`](https://github.com/NousResearch/hermes-agent):
+
 | hermes-agent | Status |
 |---|---|
-| `0.18.0` (main @ `2e34e5f`) | ✅ verified — seams + resolver exercised against the real host |
+| `0.19.0` (tag [`v2026.7.20`](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.7.20)) | ✅ verified — seams, resolver, Tier-1 end-to-end routing, and the real host plugin-loader path all exercised against the host |
+| `0.18.0` | ✅ verified (earlier release) |
 
 Because the plugin depends on host internals, new hermes-agent releases can
 drift. The signature guard turns drift into a **safe no-op with a loud log**, not
@@ -92,10 +94,18 @@ a crash. File an issue if you hit an INACTIVE warning on a newer version.
 ## Development
 
 ```bash
-uv run --with pytest pytest            # unit tests (no host needed; uses fakes)
-# integration smoke against a real host:
-PYTHONPATH=/path/to/hermes-agent:. /path/to/hermes-agent/.venv/bin/python -m pytest tests/test_integration_smoke.py
+uv run --extra dev pytest            # unit tests (no host needed; uses fakes)
+uv run --extra dev ruff check .      # lint
+uv run --extra dev mypy              # type-check
+
+# host-backed tests (integration smoke + Tier-1 e2e) against a real host —
+# they self-skip when no host is importable:
+PYTHONPATH=/path/to/hermes-agent:. \
+  /path/to/hermes-agent/.venv/bin/python -m pytest tests/test_integration_smoke.py tests/test_e2e_routing.py
 ```
+
+The host-backed tests also run in CI as an opt-in `e2e` job — see
+[`docs/CI_E2E_TESTING.md`](docs/CI_E2E_TESTING.md).
 
 ## License
 

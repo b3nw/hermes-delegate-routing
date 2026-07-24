@@ -1,9 +1,12 @@
 # End-to-End / CI Testing Design
 
-Design notes for automating end-to-end routing tests. The shipped suite (unit +
-an integration smoke test) is not covered here — this is about the next step:
-proving a real subagent actually *connects* to the routed model/provider. Not yet
-implemented. Grounded against hermes-agent 0.18.0.
+Design notes for automating end-to-end routing tests — proving a real subagent
+actually *connects* to the routed model/provider. Grounded against hermes-agent
+0.18.0.
+
+**Status:** Tier 1 is implemented and shipped as `tests/test_e2e_routing.py`. It
+self-skips without a host and runs in CI via the opt-in `e2e` job (see
+[CI wiring](#ci-wiring)). Tiers 2–3 remain future work.
 
 ## The gap
 
@@ -58,11 +61,12 @@ The shipped tests verify the seams install, the schema advertises
 | 2. Real-socket E2E | real httpx egress + provider headers | Optional (local recorder *or* a proxy) | Moderate (+~60-line recorder) |
 | 3. LLM-driven | schema advertisement + a real model choosing per-task | Yes | High, flaky → nightly only |
 
-**Tier 1 (recommended gate):** build a real parent `AIAgent`, activate the plugin,
-patch `run_agent.OpenAI` with a recording fake, call
-`delegate_task(tasks=[{…m1…},{…m2…}], background=False)`, and assert each child's
-`base_url`/`model` (correlate via a nonce in each goal, or call order). Deterministic,
-no network.
+**Tier 1 (recommended gate — implemented in `tests/test_e2e_routing.py`):** build a
+real parent `AIAgent`, activate the plugin, patch `run_agent.OpenAI` with a
+recording fake, mock the `switch_model` catalog boundary to two distinct bundles,
+call `delegate_task(tasks=[{…m1…},{…m2…}], background=False)`, and assert both
+routed `base_url`/`model` pairs reach the client boundary. Deterministic, no
+network.
 
 **Tier 2:** as Tier 1 but point `custom_providers.base_url` at a local
 `BaseHTTPRequestHandler` (or a proxy) that records `(path, model)` and returns a
@@ -73,16 +77,30 @@ flaky, nightly only.
 
 ## CI wiring
 
-1. **Install a real host:** `pip install "hermes-agent @ git+…@<PINNED_SHA>"`
-   (matrix a couple of versions; cache the venv). This is the main lift.
-2. **Tier-1 job:** install host + plugin, run the Tier-1 module. Keep it separate
-   from the fast unit job so unit tests stay host-free.
-3. **Tier-2 job (optional):** add the local recorder + a two-`custom`-provider
-   config fixture.
-4. **Nightly cron (optional):** Tier-2/3 against a real proxy; base_url + key from
-   secrets; allowed to be alerting rather than blocking.
-5. **Drift signal:** a scheduled job installing hermes-agent `main` surfaces host
-   drift early (the signature guard already no-ops loudly).
+The Tier-1 gate is wired as the opt-in **`e2e` job** in
+`.github/workflows/ci.yml`. It is **gated on two repository variables** so a fresh
+clone stays green until a host source is configured:
+
+- `HERMES_AGENT_REPO` — e.g. `NousResearch/hermes-agent` (the `owner/repo` to
+  install from).
+- `HERMES_AGENT_REF` — a pinned SHA/tag to test against (e.g. `v2026.7.20` for
+  hermes-agent 0.19.0).
+
+When both are set, the job installs the host
+(`uv pip install "hermes-agent @ git+https://github.com/$REPO@$REF"`) plus the
+plugin, then runs `tests/test_integration_smoke.py` and `tests/test_e2e_routing.py`.
+The workflow also has a weekly `schedule`; point `HERMES_AGENT_REF` at `main` for a
+**host-drift canary** (the signature guard already no-ops loudly, so drift surfaces
+as a failed assertion rather than a crash).
+
+Remaining, still-optional work:
+
+1. **Tier-2 job:** add the local recorder + a two-`custom`-provider config fixture
+   for real-socket egress + provider-header assertions.
+2. **Nightly cron:** Tier-2/3 against a real proxy; base_url + key from secrets;
+   allowed to be alerting rather than blocking.
+3. **Version matrix:** install a couple of host versions and cache each venv (the
+   host install is the main cost).
 
 ## Reference files (host)
 

@@ -15,11 +15,13 @@ from __future__ import annotations
 import sys
 import types
 
+import pytest
+
 
 def _install_fake_hermes_cli() -> None:
     try:  # real host present → use it, tests patch the real attributes
-        import hermes_cli.model_switch  # noqa: F401
         import hermes_cli.config  # noqa: F401
+        import hermes_cli.model_switch  # noqa: F401
         import hermes_cli.runtime_provider  # noqa: F401
         return
     except Exception:
@@ -72,3 +74,53 @@ def _install_fake_hermes_cli() -> None:
 
 
 _install_fake_hermes_cli()
+
+
+@pytest.fixture(autouse=True)
+def _restore_host_delegate_state():
+    """Isolate tests that monkeypatch the real host.
+
+    ``apply_patches()`` mutates ``tools.delegate_tool`` module globals (and the
+    registered ToolEntry) in place and marks them with a sentinel. Several
+    host-requiring tests install those patches; without teardown the first one
+    to run leaves the module patched, so a later test that asserts a *fresh*
+    install sees an already-wrapped function (and order becomes significant).
+
+    This fixture snapshots the mutated attributes before each test and restores
+    them after, so every host test starts from a pristine host regardless of
+    order. It is a no-op in the default unit environment, where the real host
+    is not importable.
+    """
+    try:
+        import tools.delegate_tool as dt
+    except Exception:
+        yield
+        return
+
+    saved_delegate = dt.delegate_task
+    saved_build_child = dt._build_child_agent
+    had_flag = hasattr(dt, "_HDR_PATCHED")
+    saved_flag = getattr(dt, "_HDR_PATCHED", None)
+
+    entry = None
+    saved_schema = None
+    try:
+        from tools.registry import registry
+
+        entry = registry.get_entry("delegate_task")
+        if entry is not None:
+            saved_schema = getattr(entry, "dynamic_schema_overrides", None)
+    except Exception:
+        entry = None
+
+    try:
+        yield
+    finally:
+        dt.delegate_task = saved_delegate
+        dt._build_child_agent = saved_build_child
+        if had_flag:
+            dt._HDR_PATCHED = saved_flag
+        elif hasattr(dt, "_HDR_PATCHED"):
+            del dt._HDR_PATCHED
+        if entry is not None:
+            entry.dynamic_schema_overrides = saved_schema

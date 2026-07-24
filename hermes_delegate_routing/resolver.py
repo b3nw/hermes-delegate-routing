@@ -19,13 +19,13 @@ Returns a creds dict shaped like the host's
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any
 
 
 def resolve_model_provider_override(
     *,
-    model_input: Optional[str],
-    provider_input: Optional[str],
+    model_input: str | None,
+    provider_input: str | None,
     parent_agent,
 ) -> dict:
     """Resolve an explicit delegate_task model/provider override.
@@ -88,7 +88,7 @@ def resolve_model_provider_override(
             f"{result.error_message or 'unknown error'}"
         )
 
-    creds = {
+    creds: dict[str, Any] = {
         "model": result.new_model or None,
         "provider": result.target_provider or None,
         "base_url": result.base_url or None,
