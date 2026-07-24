@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hermes-delegate-routing"
-version = "0.1.1"
+version = "0.1.2"
 description = "Hermes Agent plugin: explicit per-task model/provider routing for delegate_task (fork-free)."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -65,9 +65,9 @@ files = ["hermes_delegate_routing"]
 warn_unused_ignores = true
 no_implicit_optional = true
 
-# Host internals (hermes_cli.*, tools.*) are imported lazily and are not a
-# build/runtime dependency — they only exist inside a live hermes-agent. Don't
-# fail type-checking on their absence.
+# Host internals (hermes_cli.*, tools.*, model_tools) are imported lazily and
+# are not a build/runtime dependency — they only exist inside a live
+# hermes-agent. Don't fail type-checking on their absence.
 [[tool.mypy.overrides]]
-module = ["hermes_cli.*", "tools.*"]
+module = ["hermes_cli.*", "tools.*", "model_tools"]
 ignore_missing_imports = true

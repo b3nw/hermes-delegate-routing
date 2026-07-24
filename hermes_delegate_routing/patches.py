@@ -215,6 +215,35 @@ def _read_on_error() -> str:
         return "fail"
 
 
+def _invalidate_tool_defs_cache(registry) -> None:
+    """Force the host to recompute cached tool definitions after Seam A.
+
+    ``model_tools.get_tool_definitions(quiet_mode=True)`` — the fast path the
+    agent loop uses — memoizes into ``_tool_defs_cache`` keyed partly on
+    ``registry._generation``. Assigning ``entry.dynamic_schema_overrides``
+    directly does NOT bump ``_generation`` (only register/deregister do), so a
+    long-running gateway that populated the memo with the stock schema BEFORE we
+    patched keeps serving the field-less schema for the life of the process —
+    the LLM never sees ``tasks[].model``/``.provider`` and can't route. Both
+    hooks below are private host internals; each is best-effort and guarded so a
+    future host that renames them just degrades to no invalidation.
+    """
+    try:
+        registry._generation += 1
+    except Exception:  # pragma: no cover - defensive; private attr may move
+        logger.warning(
+            "delegate-routing: could not bump registry._generation; a warm "
+            "tool-definitions cache may keep serving the stock schema until "
+            "the next registry mutation"
+        )
+    try:
+        from model_tools import _clear_tool_defs_cache
+
+        _clear_tool_defs_cache()
+    except Exception:  # pragma: no cover - defensive; helper may move/rename
+        pass
+
+
 def _patch_schema(dt) -> None:
     """Seam A — wrap the registered ToolEntry's dynamic_schema_overrides.
 
@@ -245,6 +274,9 @@ def _patch_schema(dt) -> None:
         logger.warning("delegate-routing: no schema builder to wrap; skipping Seam A")
         return
     entry.dynamic_schema_overrides = make_schema_override(current)
+    # A direct attribute mutation doesn't bump registry._generation, so the
+    # memoized tool-definitions cache won't refresh on its own — invalidate it.
+    _invalidate_tool_defs_cache(registry)
 
 
 def apply_patches() -> bool:

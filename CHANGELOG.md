@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.2 — 2026-07-24
+
+### Fixed
+
+- **Seam A now invalidates the host's tool-definitions cache.** Advertising
+  `tasks[].model`/`.provider` mutates `entry.dynamic_schema_overrides` directly,
+  which does not bump `registry._generation`. `model_tools.get_tool_definitions`
+  (the agent loop's `quiet_mode=True` fast path) memoizes on that generation, so
+  a long-running gateway that cached the stock `delegate_task` schema *before*
+  the plugin patched kept serving the field-less schema for the life of the
+  process — the LLM never saw the new fields and per-task routing silently
+  no-op'd. `_patch_schema` now bumps `registry._generation` and clears
+  `_tool_defs_cache` after wrapping the entry (both best-effort/guarded).
+  Regression test in `tests/test_schema_cache_invalidation.py`.
+
 ## 0.1.1 — 2026-07-24
 
 Initial public release.
