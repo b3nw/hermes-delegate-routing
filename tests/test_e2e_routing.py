@@ -114,8 +114,8 @@ def test_per_task_model_provider_reaches_the_client():
 
         raw = dt.delegate_task(
             tasks=[
-                {"goal": "task A", "model": "route-alpha"},
-                {"goal": "task B", "model": "route-beta"},
+                {"goal": "summarize article A", "model": "route-alpha"},
+                {"goal": "summarize article B", "model": "route-beta"},
             ],
             background=False,
             parent_agent=parent,
