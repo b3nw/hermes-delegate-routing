@@ -138,3 +138,42 @@ def test_invalidation_survives_missing_model_tools(monkeypatch):
     assert reg._generation == gen_before + 1
     props = _task_props(entry)
     assert "model" in props and "provider" in props
+
+
+def test_invalidation_never_imports_model_tools(monkeypatch):
+    """Invalidation must not TRIGGER the model_tools import, only use it if loaded.
+
+    The host's ``model_tools`` runs plugin discovery at module import. When
+    discovery happens on a background thread while the main thread is still
+    mid-import of ``model_tools``, an ``import model_tools`` from inside the
+    plugin blocks on the interpreter's per-module import lock forever -- every
+    agent turn hangs with no output. Pin the contract: when model_tools is NOT
+    in sys.modules, _patch_schema must complete without importing it.
+    """
+    import importlib.abc
+
+    from hermes_delegate_routing.patches import _patch_schema
+
+    reg, entry, _cache, dt = _install_fake_registry_and_model_tools(
+        monkeypatch, with_model_tools=False
+    )
+    # with_model_tools=False maps sys.modules["model_tools"] -> None (ImportError
+    # on import). Replace that with a tripwire finder that records any attempt
+    # to actually import the module, and make sure it is absent from sys.modules.
+    monkeypatch.delitem(sys.modules, "model_tools", raising=False)
+    attempted = []
+
+    class _Tripwire(importlib.abc.MetaPathFinder):
+        def find_spec(self, fullname, path=None, target=None):
+            if fullname == "model_tools":
+                attempted.append(fullname)
+            return None
+
+    monkeypatch.setattr(sys, "meta_path", [_Tripwire(), *sys.meta_path])
+
+    _patch_schema(dt)  # must not raise, and must not touch the import system
+
+    assert attempted == [], "plugin must not import model_tools during invalidation"
+    assert reg._generation > 0
+    props = _task_props(entry)
+    assert "model" in props and "provider" in props
