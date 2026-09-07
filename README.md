@@ -84,6 +84,7 @@ Verified against upstream [`NousResearch/hermes-agent`](https://github.com/NousR
 
 | hermes-agent | Status |
 |---|---|
+| `0.21.0` (tag [`v2026.8.31`](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.8.31)) | ✅ verified — seams, resolver, Tier-1 end-to-end routing, and deadlock-free plugin-loader path exercised against the host |
 | `0.19.0` (tag [`v2026.7.20`](https://github.com/NousResearch/hermes-agent/releases/tag/v2026.7.20)) | ✅ verified — seams, resolver, Tier-1 end-to-end routing, and the real host plugin-loader path all exercised against the host |
 | `0.18.0` | ✅ verified (earlier release) |
 

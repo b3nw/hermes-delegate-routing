@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.3 — 2026-09-07
+
+### Fixed
+
+- **Never import `model_tools` from cache invalidation (import-lock deadlock).**
+  In Hermes Agent v0.19+, `model_tools` runs plugin discovery at module import.
+  When plugin discovery ran on a background thread while the main thread was
+  mid-import of `model_tools`, importing `model_tools` from
+  `_invalidate_tool_defs_cache` blocked on the interpreter's per-module import
+  lock forever — causing every agent CLI turn to hang indefinitely (#1 by
+  @diogo7dias). Cache invalidation now inspects `sys.modules.get("model_tools")`
+  without triggering an import; if not loaded, the `_generation` bump already
+  guarantees a cold cache on first build.
+- Added regression test `test_invalidation_never_imports_model_tools` with a
+  meta_path tripwire proving `_patch_schema` never triggers `model_tools` import.
+- Fixed test goal length validation and idempotency assertions.
+
 ## 0.1.2 — 2026-07-24
 
 ### Fixed

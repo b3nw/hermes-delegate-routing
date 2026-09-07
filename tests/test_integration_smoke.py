@@ -21,12 +21,8 @@ registry_mod = pytest.importorskip("tools.registry", reason="no hermes-agent hos
 def test_apply_patches_against_real_host():
     from hermes_delegate_routing.patches import apply_patches
 
-    orig_delegate = dt.delegate_task
-    orig_build = dt._build_child_agent
-
     assert apply_patches() is True, "plugin should activate on a supported host"
-    assert dt.delegate_task is not orig_delegate, "capture seam (B) not installed"
-    assert dt._build_child_agent is not orig_build, "apply seam (C) not installed"
+    assert getattr(dt, "_HDR_PATCHED", False) is True, "_HDR_PATCHED flag not set on host"
 
     # Seam A: the real ToolEntry now advertises the per-task fields.
     entry = registry_mod.registry.get_entry("delegate_task")

@@ -12,3 +12,4 @@ venv/
 *.egg
 .coverage
 htmlcov/
+uv.lock
