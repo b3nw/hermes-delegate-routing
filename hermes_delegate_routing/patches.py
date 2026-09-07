@@ -19,6 +19,7 @@ import copy
 import inspect
 import json
 import logging
+import sys
 import threading
 
 from ._state import ROUTING, get_creds
@@ -237,9 +238,19 @@ def _invalidate_tool_defs_cache(registry) -> None:
             "the next registry mutation"
         )
     try:
-        from model_tools import _clear_tool_defs_cache
-
-        _clear_tool_defs_cache()
+        # Only clear the cache if the host has ALREADY imported model_tools.
+        # Never trigger that import from here: this runs inside the plugin
+        # loader, which the host's ``model_tools`` triggers at module import
+        # (``discover_plugins()`` at top level). When discovery runs on a
+        # background thread while the main thread is still mid-import of
+        # ``model_tools``, importing it here blocks on the interpreter's
+        # per-module import lock and never returns -- every agent turn hangs
+        # with no output. If model_tools is not loaded yet there is nothing to
+        # clear: the ``_generation`` bump above already guarantees a cold cache
+        # on first build.
+        mt = sys.modules.get("model_tools")
+        if mt is not None:
+            mt._clear_tool_defs_cache()
     except Exception:  # pragma: no cover - defensive; helper may move/rename
         pass
 
